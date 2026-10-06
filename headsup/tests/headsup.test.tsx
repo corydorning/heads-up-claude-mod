@@ -291,7 +291,7 @@ test('questions and follow-ups have a reply field and no dismiss; notes keep the
   expect(keys.filter(key => key.startsWith('reply-'))).toHaveLength(2)
   expect(keys.filter(key => key.startsWith('done-'))).toHaveLength(1)
   expect(keys.filter(key => key.startsWith('answer-'))).toHaveLength(0)
-  // Items from this session need no Go button.
+  // Without an app link there is nowhere to go.
   expect(keys.filter(key => key.startsWith('go-'))).toHaveLength(0)
   await pane.unmount()
 })
@@ -334,7 +334,26 @@ test('Go opens the session the item came from', async ($: any, on) => {
   const pane = await $.ui.mount(PANE_AT('desktop'))
   await pane.press({ key: 'go-other1' })
   expect(ran).toEqual(['open', 'claude://claude.ai/epitaxy/local_other'])
+  // Going there closes the list.
+  expect(isPaneOpen).toBe(false)
   expect(await pane.find({ type: 'Text', text: /staging is idle/ })).toBeDefined()
+  await pane.unmount()
+})
+
+test('the reply row draws one Send, with Go to its right', async ($: any, on) => {
+  mock.store(on, { items: [FROM_ELSEWHERE, { ...FROM_ELSEWHERE, id: 'mine1', session: 'x', sessionId: 'x' }] })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  for (const id of ['other1', 'mine1']) {
+    const keys = (await pane.findAll({})).map(one => one.key ?? '').filter(key => key.endsWith(`-${id}`))
+    expect(keys.filter(key => key.startsWith('send-'))).toHaveLength(1)
+    expect(keys.filter(key => key.startsWith('go-'))).toHaveLength(1)
+    expect(keys.indexOf(`send-${id}`)).toBeLessThan(keys.indexOf(`go-${id}`))
+  }
+  expect((await pane.find({ key: 'reply-other1' }))?.props?.submitLabel).toBeUndefined()
   await pane.unmount()
 })
 

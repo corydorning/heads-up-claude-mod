@@ -26,8 +26,8 @@ Done items are pruned after 7 days; the list is capped at 200 (done items droppe
 - Pane (`/headsup` or a click on the band; opened with `focus` so the first click lands): grouped by kind,
   blocking first then newest. Questions and follow-ups show their full detail and an always-visible reply
   Input (never dismissed; Claude closes them after acting on the reply). A reply is `Re: "<item>" [<id>]\n<reply>`:
-  `$.prompt.submit` for this session's items, `$.session.send` to the item's `sessionId` for another's. Items
-  from another desktop session have `Go`, which runs `open <link>` (`claude://claude.ai/epitaxy/<host id>`,
+  `$.prompt.submit` for this session's items, `$.session.send` to the item's `sessionId` for another's. The reply row is the
+  Input, one `Send` button, then `Go` for items logged with a desktop app link, which runs `open <link>` (`claude://claude.ai/epitaxy/<host id>`,
   from `CLAUDE_CODE_HOST_SESSION_ID` at log time). Notes and failures have ✓. On mobile (no Input) `Answer`
   closes the pane and fills the prompt box instead.
 - Toasts for new questions and failures.

@@ -352,7 +352,7 @@ export const register: Register = on => {
                         {one.text}
                       </Text>
                       {isElsewhere && <Text dimColor> ({one.folder})</Text>}
-                      {isOpen && isElsewhere && one.link && (
+                      {isOpen && one.link && !(canReply && hasReplyField) && (
                         <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />
                       )}
                       {canReply && !hasReplyField && (
@@ -379,7 +379,6 @@ export const register: Register = on => {
                         <Input
                           key={`reply-${one.id}`}
                           placeholder={isElsewhere ? `Reply to ${one.folder}…` : 'Reply…'}
-                          submitLabel="send"
                           onInput={value => void update($, draftsAtom, drafts => ({ ...drafts, [one.id]: value }))}
                           onSubmit={value => void sendReply($, one, value)}
                         />
@@ -389,6 +388,7 @@ export const register: Register = on => {
                           variant="primary"
                           onPress={async () => sendReply($, one, (await read($, draftsAtom))[one.id] ?? '')}
                         />
+                        {one.link && <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />}
                       </Box>
                     )}
                   </Box>
@@ -480,9 +480,10 @@ async function sendReply($: EngineInterface, item: Item, value: string): Promise
   )
 }
 
-/** Switches the app to the session that logged the item. */
+/** Closes the list and switches the app to the session that logged the item. */
 async function goTo($: EngineInterface, item: Item): Promise<void> {
   if (item.link !== undefined) {
+    await $.ui.close({ id: PANE })
     await $.process.run(['open', item.link])
   }
 }
