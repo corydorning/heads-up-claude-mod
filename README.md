@@ -21,9 +21,16 @@ Click the bar (or run `/headsup`) to open the list.
 | Failures | Any tool call that errors or that you deny. Harmless noise is skipped: a search or check that exits 1 with no error output, like `grep` finding nothing. The item closes itself when the same command later succeeds. |
 | Notes | Your own, with `/todo <text>`. |
 
-**Answering**: every question and follow-up has a reply field right under it, with Claude's explanation above it. Type and press Enter (or **Send**). The reply goes to the session that asked: to Claude here if it came from this session, or as a message to that other session if not. It arrives as `Re: "<item>" [<id>]`, and Claude closes the item once it has acted on it. Items from another desktop session also have a **Go** button that switches the app to that session for the full conversation. Questions and follow-ups can't be dismissed unanswered; notes and failures have ✓. (The mobile app has no text fields, so there an **Answer** button puts the reply line in your prompt box.)
+**Answering**
 
-**Shared**: the list is kept across sessions on the same machine, and each item shows which folder it came from. `/headsup clear` marks everything from the current session done.
+- Every question and follow-up has a reply box under it. Type your answer and press Enter (or click **Send**).
+- Your reply goes to the Claude session that asked, even if you're looking at the list from a different session.
+- Once Claude has acted on your reply, the item disappears from the list.
+- **Go** takes you to the session an item came from, so you can read the full conversation.
+- Questions and follow-ups stay until they're answered. Notes and failures have a ✓ to clear them.
+- On the mobile app, which has no reply boxes, an **Answer** button puts the question in your prompt instead.
+
+**Shared**: all your Claude Code sessions on the same computer share one list. Each item shows when it was raised and which project folder it came from. `/headsup clear` clears everything from the current session.
 
 ## Install
 
