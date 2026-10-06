@@ -393,3 +393,48 @@ test('an older item from another session, saved before session ids, offers ✓ i
   expect(await listText($)).toBe('Nothing needs attention.')
   await pane.unmount()
 })
+
+test('a reply is sent once: the field gives way to a sent note and repeats are ignored', async ($: any, on) => {
+  mock.store(on)
+  mock.clock(on)
+  stubElsewhere(on)
+  let submits = 0
+  on('turn.start', (_$: unknown, e: { turnId: string }) => ({ turnId: e.turnId }))
+  await start($, on)
+  await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Add the setting?' })
+  const id = (await listText($)).match(/\[(\w+)\] Add/)?.[1]
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  await pane.input({ key: `reply-${id}`, text: 'ok' })
+  if (submitted) submits += 1
+  submitted = undefined
+  expect(await pane.find({ key: `reply-${id}` })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /Reply sent/ })).toBeDefined()
+  await pane.unmount()
+
+  // Even a reply that reaches the handler again is dropped.
+  const again = await $.ui.mount(PANE_AT('desktop'))
+  expect(await again.find({ key: `reply-${id}` })).toBeUndefined()
+  expect(submits).toBe(1)
+  // Reply again gives the field back, for when Claude leaves the item open.
+  await again.press({ key: `again-${id}` })
+  expect(await again.find({ key: `reply-${id}` })).toBeDefined()
+  await again.unmount()
+})
+
+test('the Send button sends what was typed, once', async ($: any, on) => {
+  mock.store(on)
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+  await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Ship today?' })
+  const id = (await listText($)).match(/\[(\w+)\] Ship/)?.[1]
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  await pane.input({ key: `reply-${id}`, text: 'yes, ship it', kind: 'change' })
+  expect(submitted).toBeUndefined()
+  await pane.press({ key: `send-${id}` })
+  expect(submitted).toBe(`Re: "Ship today?" [${id}]\nyes, ship it`)
+  expect(await pane.find({ key: `send-${id}` })).toBeUndefined()
+  await pane.unmount()
+})

@@ -18,6 +18,8 @@ export type Item = {
   createdAt: number
   status: ItemStatus
   doneAt?: number
+  /** When the user's reply was sent; the item waits for Claude to act on it and close it. */
+  repliedAt?: number
   /** Questions only: Claude cannot continue until the user answers. */
   blocking?: boolean
   /** Failures only: what identifies a repeat of the same failure. */
@@ -26,6 +28,6 @@ export type Item = {
 
 declare module 'claude-code' {
   interface PluginState {
-    attention: { items: Item[]; showDone: boolean }
+    attention: { items: Item[]; showDone: boolean; drafts: Record<string, string> }
   }
 }

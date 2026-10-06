@@ -29,6 +29,8 @@ const STORE_KEY = 'items'
 // The shared list: `$.store` holds it across sessions, `$.state` mirrors it so drawings redraw.
 const itemsAtom = atom({ plugin: 'attention', key: 'items' } as const, [] as Item[])
 const showDoneAtom = atom({ plugin: 'attention', key: 'showDone' } as const, false)
+// What is typed in each reply field, by item id, so the Send button can send it.
+const draftsAtom = atom({ plugin: 'attention', key: 'drafts' } as const, {} as Record<string, string>)
 
 const GUIDANCE = `# Tracking items that need the user's attention
 
@@ -297,6 +299,9 @@ export const register: Register = on => {
     const hasReplyField = e.surface !== 'mobile'
     const shown = showDone ? items : openItems(items)
 
+    const reopen = (id: string) => () =>
+      void change($, list => list.map(one => (one.id === id ? { ...one, repliedAt: undefined } : one)))
+
     const done = (id: string) => async () => {
       const now = await $.clock.now()
       await change($, list => resolve(list, [id], now))
@@ -328,7 +333,8 @@ export const register: Register = on => {
                 const isElsewhere = one.session !== session
                 // Logged before items saved their session's id: a reply here could not reach it.
                 const isUnreachable = isAnswerable && isElsewhere && one.sessionId === undefined
-                const canReply = isOpen && isAnswerable && !isUnreachable
+                const hasReplied = one.repliedAt !== undefined
+                const canReply = isOpen && isAnswerable && !isUnreachable && !hasReplied
 
                 return (
                   <Box key={`item-${one.id}`} flexDirection="column">
@@ -362,13 +368,28 @@ export const register: Register = on => {
                     {isOpen && isUnreachable && (
                       <Text dimColor>{'  '}Logged before replies could reach other sessions: reply in that session, or ✓ to clear.</Text>
                     )}
+                    {isOpen && hasReplied && (
+                      <Box>
+                        <Text dimColor>{'  '}Reply sent, waiting for Claude. </Text>
+                        <Button key={`again-${one.id}`} label="Reply again" plain dimColor onPress={reopen(one.id)} />
+                      </Box>
+                    )}
                     {canReply && hasReplyField && (
-                      <Input
-                        key={`reply-${one.id}`}
-                        placeholder={isElsewhere ? `Reply to ${one.folder}…` : 'Reply…'}
-                        submitLabel="Send"
-                        onSubmit={value => void sendReply($, one, value)}
-                      />
+                      <Box>
+                        <Input
+                          key={`reply-${one.id}`}
+                          placeholder={isElsewhere ? `Reply to ${one.folder}…` : 'Reply…'}
+                          submitLabel="send"
+                          onInput={value => void update($, draftsAtom, drafts => ({ ...drafts, [one.id]: value }))}
+                          onSubmit={value => void sendReply($, one, value)}
+                        />
+                        <Button
+                          key={`send-${one.id}`}
+                          label="Send"
+                          variant="primary"
+                          onPress={async () => sendReply($, one, (await read($, draftsAtom))[one.id] ?? '')}
+                        />
+                      </Box>
                     )}
                   </Box>
                 )
@@ -414,6 +435,26 @@ async function sendReply($: EngineInterface, item: Item, value: string): Promise
     return
   }
 
+  // Claim the item first, from the stored list, so a second Enter or click sends nothing more.
+  let isClaimed = false
+  const now = await $.clock.now()
+  await change($, items =>
+    items.map(one => {
+      if (one.id !== item.id || one.status !== 'open' || one.repliedAt !== undefined) {
+        return one
+      }
+
+      isClaimed = true
+
+      return { ...one, repliedAt: now }
+    }),
+  )
+
+  if (!isClaimed) {
+    return
+  }
+
+  await update($, draftsAtom, ({ [item.id]: _sent, ...rest }) => rest)
   const text = `Re: "${item.text}" [${item.id}]\n${reply}`
 
   if (item.session === session) {
@@ -422,13 +463,16 @@ async function sendReply($: EngineInterface, item: Item, value: string): Promise
     return
   }
 
-  if (item.sessionId === undefined) {
-    $.ui.toast(`Can't reach the ${item.folder} session from here; open it to reply.`)
+  const sent =
+    item.sessionId === undefined
+      ? { isDelivered: false as const, reason: 'it was logged before replies could reach other sessions' }
+      : await $.session.send({ to: { sessionId: item.sessionId }, text })
 
-    return
+  if (!sent.isDelivered) {
+    // Give the field back so the user can try again or go there instead.
+    await change($, items => items.map(one => (one.id === item.id ? { ...one, repliedAt: undefined } : one)))
   }
 
-  const sent = await $.session.send({ to: { sessionId: item.sessionId }, text })
   $.ui.toast(
     sent.isDelivered
       ? `Reply sent to ${item.folder}.`
