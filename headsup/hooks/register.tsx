@@ -368,7 +368,6 @@ export const register: Register = on => {
                     </Text>
                     {one.detail && isOpen && (
                       <Text dimColor wrap="wrap">
-                        {'  '}
                         {one.detail}
                       </Text>
                     )}
@@ -379,11 +378,11 @@ export const register: Register = on => {
                       </Box>
                     )}
                     {isOpen && isUnreachable && (
-                      <Text dimColor>{'  '}Logged before replies could reach other sessions: reply in that session, or ✓ to clear.</Text>
+                      <Text dimColor>Logged before replies could reach other sessions: reply in that session, or ✓ to clear.</Text>
                     )}
                     {isOpen && hasReplied && (
                       <Box>
-                        <Text dimColor>{'  '}Reply sent, waiting for Claude. </Text>
+                        <Text dimColor>Reply sent, waiting for Claude. </Text>
                         <Button key={`again-${one.id}`} label="Reply again" plain dimColor onPress={reopen(one.id)} />
                       </Box>
                     )}

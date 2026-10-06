@@ -341,6 +341,7 @@ test('Go opens the session the item came from', async ($: any, on) => {
   expect(texts[title + 1]?.props.italic).toBe(true)
   expect(lines[title + 1]).toMatch(/^(Today|Yesterday|\w{3} \d{1,2}(, \d{4})?), \d{1,2}:\d{2} [AP]M · from shop-api$/)
   expect(lines[title + 2]).toContain('staging is idle')
+  expect(texts[title + 2]?.text.startsWith(' ')).toBe(false)
   await pane.press({ key: 'go-other1' })
   expect(ran).toEqual(['open', 'claude://claude.ai/epitaxy/local_other'])
   // Going there closes the list.
