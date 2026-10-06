@@ -43,3 +43,9 @@ Done items are pruned after 7 days; the list is capped at 200 (done items droppe
 ## Loading
 Lives in `~/.claude/mods/headsup`; `~/.claude/settings.json` names it in `env.CLAUDE_CODE_PLUGIN_DIRS`,
 so every new session loads it.
+
+## Go to the message (experiment)
+Each item records `messageUuid`, the id of Claude's latest text message in the main conversation when it
+was logged (`session.append`, door `response`). Go adds it to the session link as `message`, `messageUuid`
+and `uuid`, since no parameter for opening a session at a message is documented. If the page reads none,
+Go opens the session as before.

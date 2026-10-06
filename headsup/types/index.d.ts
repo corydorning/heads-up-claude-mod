@@ -11,6 +11,8 @@ export type Item = {
   session: string
   /** Full id of that session, for sending it replies; absent on items from before it was recorded. */
   sessionId?: string
+  /** The id of Claude's message the item was raised in, so Go can try to open the session there. */
+  messageUuid?: string
   /** The desktop app's link to that session; absent for terminal and remote sessions. */
   link?: string
   /** Folder name of that session, shown on items from other sessions. */

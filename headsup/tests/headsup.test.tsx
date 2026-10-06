@@ -479,3 +479,17 @@ test('the Send button sends what was typed, once', async ($: any, on) => {
   expect(await pane.find({ key: `send-${id}` })).toBeUndefined()
   await pane.unmount()
 })
+
+test('Go opens the session at the message the item was asked in', async ($: any, on) => {
+  mock.store(on, { items: [{ ...FROM_ELSEWHERE, messageUuid: 'msg-ask' }] })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  await pane.press({ key: 'go-other1' })
+  expect(ran?.[0]).toBe('open')
+  expect(ran?.[1]).toContain('claude://claude.ai/epitaxy/local_other?')
+  expect(ran?.[1]).toContain('message=msg-ask')
+  await pane.unmount()
+})

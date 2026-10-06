@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { MAX_ITEMS, DONE_TTL_MS, add, addFailure, blockingCount, counts, ofKind, prune, resolve, resolveFingerprint, summary } from '../hooks/items'
+import { claudeTextUuid, goLink, MAX_ITEMS, DONE_TTL_MS, add, addFailure, blockingCount, counts, ofKind, prune, resolve, resolveFingerprint, summary } from '../hooks/items'
 import type { Item } from '../types'
 
 const item = (over: Partial<Item>): Item => ({
@@ -65,4 +65,19 @@ test('blocking questions sort first and lead the summary', () => {
   expect(blockingCount(items)).toBe(1)
   expect(summary(items)).toBe('2 questions · 1 follow-up')
   expect(blockingCount([item({ kind: 'question', blocking: true, status: 'done', doneAt: 5 })])).toBe(0)
+})
+
+test('claudeTextUuid picks only Claude\'s own text in the main conversation', () => {
+  const text = { type: 'assistant', content: [{ type: 'text', text: 'Deploy now?' }] }
+  expect(claudeTextUuid({ door: 'response', uuid: 'a', message: text })).toBe('a')
+  expect(claudeTextUuid({ door: 'response', uuid: 'b', agentId: 'sub', message: text })).toBeUndefined()
+  expect(claudeTextUuid({ door: 'prompt', uuid: 'c', message: { type: 'user', content: [{ type: 'text', text: 'hi' }] } })).toBeUndefined()
+  expect(
+    claudeTextUuid({ door: 'response', uuid: 'd', message: { type: 'assistant', content: [{ type: 'tool_use', id: 't' }] } }),
+  ).toBeUndefined()
+})
+
+test('goLink adds the message under each likely name, and leaves a link without one alone', () => {
+  expect(goLink('claude://x/s', undefined)).toBe('claude://x/s')
+  expect(goLink('claude://x/s', 'm 1')).toBe('claude://x/s?message=m%201&messageUuid=m%201&uuid=m%201')
 })
