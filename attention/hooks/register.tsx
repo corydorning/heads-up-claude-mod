@@ -326,25 +326,30 @@ export const register: Register = on => {
                 // Claude closes them once it has acted on the reply.
                 const isAnswerable = one.kind === 'question' || one.kind === 'followup'
                 const isElsewhere = one.session !== session
+                // Logged before items saved their session's id: a reply here could not reach it.
+                const isUnreachable = isAnswerable && isElsewhere && one.sessionId === undefined
+                const canReply = isOpen && isAnswerable && !isUnreachable
 
                 return (
                   <Box key={`item-${one.id}`} flexDirection="column">
                     <Box>
                       {!isOpen && <Text dimColor>✓ </Text>}
-                      {isOpen && !isAnswerable && <Button key={`done-${one.id}`} label="✓" onPress={done(one.id)} />}
+                      {isOpen && (!isAnswerable || isUnreachable) && (
+                        <Button key={`done-${one.id}`} label="✓" onPress={done(one.id)} />
+                      )}
                       <Text
                         dimColor={!isOpen}
                         strikethrough={!isOpen}
                         color={one.blocking && isOpen ? 'error' : undefined}
                       >
-                        {isAnswerable && isOpen ? '' : ' '}
+                        {canReply ? '' : ' '}
                         {one.text}
                       </Text>
                       {isElsewhere && <Text dimColor> ({one.folder})</Text>}
                       {isOpen && isElsewhere && one.link && (
                         <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />
                       )}
-                      {isOpen && isAnswerable && !hasReplyField && (
+                      {canReply && !hasReplyField && (
                         <Button key={`answer-${one.id}`} label="Answer" onPress={() => void answer($, one)} />
                       )}
                     </Box>
@@ -354,7 +359,10 @@ export const register: Register = on => {
                         {one.detail}
                       </Text>
                     )}
-                    {isOpen && isAnswerable && hasReplyField && (
+                    {isOpen && isUnreachable && (
+                      <Text dimColor>{'  '}Logged before replies could reach other sessions: reply in that session, or ✓ to clear.</Text>
+                    )}
+                    {canReply && hasReplyField && (
                       <Input
                         key={`reply-${one.id}`}
                         placeholder={isElsewhere ? `Reply to ${one.folder}…` : 'Reply…'}

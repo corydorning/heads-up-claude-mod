@@ -378,3 +378,18 @@ test('on the phone, which has no text fields, Answer puts the item in the prompt
   expect(filled).toContain('Merge now?')
   await pane.unmount()
 })
+
+test('an older item from another session, saved before session ids, offers ✓ instead of a reply field', async ($: any, on) => {
+  const { sessionId: _id, link: _link, ...older } = FROM_ELSEWHERE
+  mock.store(on, { items: [older] })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  expect(await pane.find({ key: 'reply-other1' })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /reply in that session/ })).toBeDefined()
+  await pane.press({ key: 'done-other1' })
+  expect(await listText($)).toBe('Nothing needs attention.')
+  await pane.unmount()
+})
