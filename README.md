@@ -27,7 +27,8 @@ Click the bar (or run `/headsup`) to open the list.
 - Your reply goes to the Claude session that asked, even if you're looking at the list from a different session.
 - Once Claude has acted on your reply, the item disappears from the list.
 - **Go** takes you to the session an item came from, so you can read the full conversation.
-- Questions and follow-ups stay until they're answered. Notes and failures have a ✓ to clear them.
+- Questions and follow-ups stay until they're answered.
+- Notes have a ✓ to check them off. Failures have **Close** to clear them, and **Go** to jump to the session where they happened.
 - On the mobile app, which has no reply boxes, an **Answer** button puts the question in your prompt instead.
 
 **Shared**: all your Claude Code sessions on the same computer share one list. Each item shows when it was raised and which project folder it came from. `/headsup clear` clears everything from the current session.
