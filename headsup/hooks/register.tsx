@@ -355,11 +355,6 @@ export const register: Register = on => {
                         {canReply ? '' : ' '}
                         {one.text}
                       </Text>
-                      <Text dimColor>
-                        {' '}
-                        ({isElsewhere ? `${one.folder}, ` : ''}
-                        {askedAt(one.createdAt, now)})
-                      </Text>
                       {isOpen && one.link && !(canReply && hasReplyField) && !hasFailureRow && (
                         <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />
                       )}
@@ -367,6 +362,11 @@ export const register: Register = on => {
                         <Button key={`answer-${one.id}`} label="Answer" onPress={() => void answer($, one)} />
                       )}
                     </Box>
+                    <Text dimColor>
+                      {'  '}
+                      {askedAt(one.createdAt, now)}
+                      {isElsewhere ? ` · from ${one.folder}` : ''}
+                    </Text>
                     {one.detail && isOpen && (
                       <Text dimColor wrap="wrap">
                         {'  '}

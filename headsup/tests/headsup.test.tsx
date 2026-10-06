@@ -332,8 +332,11 @@ test('Go opens the session the item came from', async ($: any, on) => {
   await start($, on)
 
   const pane = await $.ui.mount(PANE_AT('desktop'))
-  // Each item says where and when it was raised.
-  expect(await pane.find({ type: 'Text', text: /\(shop-api, (\w{3} \d{1,2}, )?\d{1,2}:\d{2} [AP]M\)/ })).toBeDefined()
+  // Under the question: when it was raised and where, then the detail.
+  const lines = (await pane.findAll({ type: 'Text' })).map(one => one.text.trim())
+  const title = lines.findIndex(line => line.includes('Deploy to staging?'))
+  expect(lines[title + 1]).toMatch(/^(\w{3} \d{1,2}, )?\d{1,2}:\d{2} [AP]M · from shop-api$/)
+  expect(lines[title + 2]).toContain('staging is idle')
   await pane.press({ key: 'go-other1' })
   expect(ran).toEqual(['open', 'claude://claude.ai/epitaxy/local_other'])
   // Going there closes the list.
