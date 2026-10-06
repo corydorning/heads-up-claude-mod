@@ -38,12 +38,13 @@ Then add the mod's folder to `~/.claude/settings.json`:
 ```json
 {
   "env": {
-    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/attention"
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/attention",
+    "CLAUDE_CODE_PLUGIN_DIR_WATCH": "1"
   }
 }
 ```
 
-New sessions load it. To try it in one session only: `claude --plugin-dir ~/.claude/mods/attention`.
+New sessions load it. `CLAUDE_CODE_PLUGIN_DIR_WATCH` makes desktop-app sessions reload the mod when its files change (after a `git pull`, say); without it, a session keeps the version it started with. To try it in one session only: `claude --plugin-dir ~/.claude/mods/attention`.
 
 ### Remote (cloud) sessions
 
