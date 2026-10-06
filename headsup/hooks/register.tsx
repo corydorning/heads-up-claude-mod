@@ -20,26 +20,26 @@ import {
 import { isNoise } from './noise'
 import { trailingQuestion } from './questions'
 
-const PANE = 'attention'
-const TOOL = 'attention'
-const TOOL_FULL = 'mcp__attention__attention'
+const PANE = 'headsup'
+const TOOL = 'headsup'
+const TOOL_FULL = 'mcp__headsup__headsup'
 const REFRESH_MS = 30_000
 const STORE_KEY = 'items'
 
 // The shared list: `$.store` holds it across sessions, `$.state` mirrors it so drawings redraw.
-const itemsAtom = atom({ plugin: 'attention', key: 'items' } as const, [] as Item[])
-const showDoneAtom = atom({ plugin: 'attention', key: 'showDone' } as const, false)
+const itemsAtom = atom({ plugin: 'headsup', key: 'items' } as const, [] as Item[])
+const showDoneAtom = atom({ plugin: 'headsup', key: 'showDone' } as const, false)
 // What is typed in each reply field, by item id, so the Send button can send it.
-const draftsAtom = atom({ plugin: 'attention', key: 'drafts' } as const, {} as Record<string, string>)
+const draftsAtom = atom({ plugin: 'headsup', key: 'drafts' } as const, {} as Record<string, string>)
 
-const GUIDANCE = `# Tracking items that need the user's attention
+const GUIDANCE = `# Heads Up: items that need the user's attention
 
 You have an \`${TOOL_FULL}\` tool that keeps a list of open items the user sees above their prompt.
 - When you end a turn with a question or a decision only the user can make, call it with action "add", kind "question", and a one-line summary of what you need from them.
 - Set "blocking": true on a question only when you have stopped and cannot continue until the user answers; leave it off when you made a reasonable choice and the user can weigh in whenever.
 - When you tell the user to do something later that you cannot do yourself (restart a server, review before merging, rotate a key), call it with action "add", kind "followup".
 - When an item you or the user logged is dealt with (the user answered, the follow-up is done), call it with action "resolve" and its ids. Use action "list" to see open ids.
-- A message that begins \`Re: "<item>" [<id>]\` (typed here, or sent from another session's attention list) is the user's reply to that logged question or follow-up: act on it, then resolve that id unless the reply leaves it open.
+- A message that begins \`Re: "<item>" [<id>]\` (typed here, or sent from another session's Heads Up list) is the user's reply to that logged question or follow-up: act on it, then resolve that id unless the reply leaves it open.
 - Always give a "detail" of 1-3 sentences that makes sense to someone who has not seen this conversation: what you were doing, the options, and what each answer leads to.
 - Keep each item's text to one short line. Do not log routine progress, and do not log the same thing twice.
 Failed commands and the user's own /todo notes are tracked automatically; do not log those.`
@@ -92,10 +92,10 @@ export const register: Register = on => {
         "Track items that need the user's attention: questions you asked them and follow-ups only they can do. Actions: add, resolve, list.",
       inputSchema: TOOL_SCHEMA,
     })
-    await $.command.register({ name: 'todo', description: 'Add a note to your attention list' })
+    await $.command.register({ name: 'todo', description: 'Add a note to your Heads Up list' })
     await $.command.register({
-      name: 'attention',
-      description: "Open the attention list ('clear' marks this session's items done)",
+      name: 'headsup',
+      description: "Open your Heads Up list ('clear' marks this session's items done)",
     })
     await refresh($)
     $.clock.every(REFRESH_MS, () => void refresh($))
@@ -115,7 +115,7 @@ export const register: Register = on => {
 
     return {
       ...composed,
-      sections: [...composed.sections, { id: 'attention', text: GUIDANCE, scope: 'session' }],
+      sections: [...composed.sections, { id: 'headsup', text: GUIDANCE, scope: 'session' }],
     }
   })
 
@@ -241,10 +241,10 @@ export const register: Register = on => {
     const item = await newItem($, 'note', text)
     await change($, items => add(items, item))
 
-    return { text: `Added to your attention list: ${text}` }
+    return { text: `Added to your Heads Up list: ${text}` }
   })
 
-  on('command.run', { command: 'attention' }, async ($, e) => {
+  on('command.run', { command: 'headsup' }, async ($, e) => {
     if (e.args.trim() === 'clear') {
       const now = await $.clock.now()
       const mine = openItems(await read($, itemsAtom))
@@ -272,7 +272,7 @@ export const register: Register = on => {
     const blocking = blockingCount(open)
     const open$ = () => void openPane($)
     // Every part of the bar opens the list; hovering any part underlines the whole bar.
-    const hover = { scope: 'attention-bar', underline: true }
+    const hover = { scope: 'headsup-bar', underline: true }
 
     return (
       <Box>
@@ -495,8 +495,8 @@ async function answer($: EngineInterface, item: Item): Promise<void> {
 }
 
 async function openPane($: EngineInterface): Promise<void> {
-  // Opened by the person (the bar or /attention), so it takes the keys: a first click then lands.
-  await $.ui.open({ id: PANE, title: 'Needs attention', focus: true })
+  // Opened by the person (the bar or /headsup), so it takes the keys: a first click then lands.
+  await $.ui.open({ id: PANE, title: 'Heads up', focus: true })
 }
 
 function hasStderr(result: unknown): boolean {

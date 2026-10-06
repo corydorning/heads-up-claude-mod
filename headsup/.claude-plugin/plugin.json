@@ -1,0 +1,12 @@
+{
+  "name": "headsup",
+  "version": "0.1.0",
+  "description": "Heads Up: one list of what needs you in Claude Code, from questions and follow-ups to failures and your own notes",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Cory Dorning"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/corydorning/claude-mods",
+  "homepage": "https://github.com/corydorning/claude-mods/tree/main/headsup"
+}

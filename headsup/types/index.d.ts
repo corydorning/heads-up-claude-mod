@@ -28,6 +28,6 @@ export type Item = {
 
 declare module 'claude-code' {
   interface PluginState {
-    attention: { items: Item[]; showDone: boolean; drafts: Record<string, string> }
+    headsup: { items: Item[]; showDone: boolean; drafts: Record<string, string> }
   }
 }

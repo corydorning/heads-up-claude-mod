@@ -6,9 +6,9 @@
   },
   "plugins": [
     {
-      "name": "attention",
-      "source": "./attention",
-      "description": "Tracks what needs your attention in Claude Code: questions, follow-ups, failures and your own notes"
+      "name": "headsup",
+      "source": "./headsup",
+      "description": "Heads Up: one list of what needs you in Claude Code, from questions and follow-ups to failures and your own notes"
     }
   ]
 }

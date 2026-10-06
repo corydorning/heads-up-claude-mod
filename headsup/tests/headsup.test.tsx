@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-const TOOL = 'mcp__attention__attention'
+const TOOL = 'mcp__headsup__headsup'
 
 // Stands in for the engine beneath the plugin, then starts the session.
 let filled: string | undefined
@@ -31,7 +31,7 @@ async function start($: any, on: any, env: Record<string, string> = {}) {
   })
   on('session.start', (_$: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: 'abcdef1234567890' }))
-  on('tool.register', (_$: unknown, e: { name: string }) => ({ value: { tool: `mcp__attention__${e.name}` } }))
+  on('tool.register', (_$: unknown, e: { name: string }) => ({ value: { tool: `mcp__headsup__${e.name}` } }))
   on('command.register', (_$: unknown, e: { name: string }) => ({ value: { command: e.name } }))
   // The engine's own band, drawn when the plugin steps aside.
   on('ui.render', { component: 'AbovePrompt' }, ($$: any, e: any) => {
@@ -93,7 +93,7 @@ test('the model adds and resolves questions through its tool', async ($: any, on
   expect(bad.isError).toBe(true)
 })
 
-test('/todo adds a note and /attention clear closes this session\'s items', async ($: any, on) => {
+test('/todo adds a note and /headsup clear closes this session\'s items', async ($: any, on) => {
   mock.store(on)
   mock.clock(on)
   await start($, on)
@@ -101,7 +101,7 @@ test('/todo adds a note and /attention clear closes this session\'s items', asyn
   await $.command.run({ command: 'todo', args: 'rotate the API key', origin: { kind: 'user' }, presentation: {} })
   expect(await listText($)).toContain('rotate the API key')
 
-  const cleared = await $.command.run({ command: 'attention', args: 'clear', origin: { kind: 'user' }, presentation: {} })
+  const cleared = await $.command.run({ command: 'headsup', args: 'clear', origin: { kind: 'user' }, presentation: {} })
   expect(cleared.text).toContain('Marked 1')
   expect(await listText($)).toBe('Nothing needs attention.')
 })
@@ -113,7 +113,7 @@ test('the band shows a count when items are open and steps aside when none are',
   const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 100 } } as const
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    const empty = await $.ui.mount({ plugin: 'attention', surface, ...BAND })
+    const empty = await $.ui.mount({ plugin: 'headsup', surface, ...BAND })
     expect(await empty.find({ key: 'open' })).toBeUndefined()
     expect(await empty.find({ key: 'engine-band' })).toBeDefined()
     await empty.unmount()
@@ -122,7 +122,7 @@ test('the band shows a count when items are open and steps aside when none are',
   await $.command.run({ command: 'todo', args: 'check the deploy', origin: { kind: 'user' }, presentation: {} })
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    const band = await $.ui.mount({ plugin: 'attention', surface, ...BAND })
+    const band = await $.ui.mount({ plugin: 'headsup', surface, ...BAND })
     expect((await band.find({ key: 'open' }))?.text).toContain('1 needs you')
     expect((await band.find({ key: 'open-summary' }))?.text).toContain('1 note')
     expect(await band.find({ key: 'open-blocking' })).toBeUndefined()
@@ -137,17 +137,17 @@ test('the pane lists items and its ✓ button marks one done', async ($: any, on
   await $.command.run({ command: 'todo', args: 'update the changelog', origin: { kind: 'user' }, presentation: {} })
   const PANE = {
     component: 'Pane',
-    requestId: 'attention',
-    props: { title: 'Needs attention', isFocused: true, bodyColumns: 60 },
+    requestId: 'headsup',
+    props: { title: 'Heads up', isFocused: true, bodyColumns: 60 },
   } as const
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    const pane = await $.ui.mount({ plugin: 'attention', surface, ...PANE })
+    const pane = await $.ui.mount({ plugin: 'headsup', surface, ...PANE })
     expect(await pane.find({ type: 'Text', text: /update the changelog/ })).toBeDefined()
     await pane.unmount()
   }
 
-  const pane = await $.ui.mount({ plugin: 'attention', surface: 'terminal', ...PANE })
+  const pane = await $.ui.mount({ plugin: 'headsup', surface: 'terminal', ...PANE })
   const done = (await pane.findAll({ type: 'Button' })).find(one => one.key?.startsWith('done-'))
   expect(done).toBeDefined()
   await pane.press({ key: done!.key! })
@@ -204,7 +204,7 @@ test('a blocking question shows as blocking in the band', async ($: any, on) => 
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const band = await $.ui.mount({
-      plugin: 'attention',
+      plugin: 'headsup',
       surface,
       component: 'AbovePrompt',
       props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 100 },
@@ -226,7 +226,7 @@ test('clicking anywhere on the bar opens the list', async ($: any, on) => {
   await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Stuck here?', blocking: true })
 
   const band = await $.ui.mount({
-    plugin: 'attention',
+    plugin: 'headsup',
     surface: 'terminal',
     component: 'AbovePrompt',
     props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 100 },
@@ -234,17 +234,17 @@ test('clicking anywhere on the bar opens the list', async ($: any, on) => {
   for (const key of ['open-blocking', 'open', 'open-summary']) {
     await band.press({ key })
   }
-  expect(opened).toEqual(['attention', 'attention', 'attention'])
+  expect(opened).toEqual(['headsup', 'headsup', 'headsup'])
   await band.unmount()
 })
 
 const PANE_AT = (surface: 'terminal' | 'desktop' | 'mobile') =>
   ({
-    plugin: 'attention',
+    plugin: 'headsup',
     surface,
     component: 'Pane',
-    requestId: 'attention',
-    props: { title: 'Needs attention', isFocused: true, bodyColumns: 60 },
+    requestId: 'headsup',
+    props: { title: 'Heads up', isFocused: true, bodyColumns: 60 },
   }) as const
 
 // An item another session logged, with that session's id and app link.

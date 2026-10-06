@@ -113,7 +113,7 @@ export function blockingCount(items: readonly Item[]): number {
   return openItems(items).filter(one => one.blocking === true).length
 }
 
-/** Plain-text listing, for the tool's `list` and the /attention fallback. */
+/** Plain-text listing, for the tool's `list` and the /headsup fallback. */
 export function listing(items: readonly Item[]): string {
   const open = openItems(items)
 
