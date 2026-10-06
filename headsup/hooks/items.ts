@@ -146,3 +146,17 @@ export function isItemList(value: unknown): value is Item[] {
     )
   )
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** When an item was raised, in local time: "9:05 AM" today, "Oct 5, 9:05 AM" before. */
+export function askedAt(createdAt: number, now: number): string {
+  const at = new Date(createdAt)
+  const today = new Date(now)
+  const hours = at.getHours() % 12 === 0 ? 12 : at.getHours() % 12
+  const time = `${hours}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'AM' : 'PM'}`
+  const isToday =
+    at.getFullYear() === today.getFullYear() && at.getMonth() === today.getMonth() && at.getDate() === today.getDate()
+
+  return isToday ? time : `${MONTHS[at.getMonth()]} ${at.getDate()}, ${time}`
+}

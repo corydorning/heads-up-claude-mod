@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { MAX_ITEMS, DONE_TTL_MS, add, addFailure, blockingCount, counts, ofKind, prune, resolve, resolveFingerprint, summary } from '../hooks/items'
+import { askedAt, MAX_ITEMS, DONE_TTL_MS, add, addFailure, blockingCount, counts, ofKind, prune, resolve, resolveFingerprint, summary } from '../hooks/items'
 import type { Item } from '../types'
 
 const item = (over: Partial<Item>): Item => ({
@@ -65,4 +65,12 @@ test('blocking questions sort first and lead the summary', () => {
   expect(blockingCount(items)).toBe(1)
   expect(summary(items)).toBe('2 questions · 1 follow-up')
   expect(blockingCount([item({ kind: 'question', blocking: true, status: 'done', doneAt: 5 })])).toBe(0)
+})
+
+test('askedAt shows the time for today and the date too for earlier days', () => {
+  const now = new Date(2026, 9, 6, 17, 30).getTime()
+  const earlierToday = new Date(2026, 9, 6, 9, 5).getTime()
+  const yesterday = new Date(2026, 9, 5, 21, 0).getTime()
+  expect(askedAt(earlierToday, now)).toMatch(/^9:05\s?AM$/)
+  expect(askedAt(yesterday, now)).toMatch(/^Oct 5, 9:00\s?PM$/)
 })

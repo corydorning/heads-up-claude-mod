@@ -332,6 +332,8 @@ test('Go opens the session the item came from', async ($: any, on) => {
   await start($, on)
 
   const pane = await $.ui.mount(PANE_AT('desktop'))
+  // Each item says where and when it was raised.
+  expect(await pane.find({ type: 'Text', text: /\(shop-api, (\w{3} \d{1,2}, )?\d{1,2}:\d{2} [AP]M\)/ })).toBeDefined()
   await pane.press({ key: 'go-other1' })
   expect(ran).toEqual(['open', 'claude://claude.ai/epitaxy/local_other'])
   // Going there closes the list.

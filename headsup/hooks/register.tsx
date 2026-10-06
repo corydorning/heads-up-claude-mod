@@ -7,6 +7,7 @@ import {
   KIND_ORDER,
   add,
   addFailure,
+  askedAt,
   blockingCount,
   isItemList,
   listing,
@@ -295,6 +296,7 @@ export const register: Register = on => {
     const { Box, Button, Input, Text } = $.ui.resolve(e)
     const items = await read($, itemsAtom)
     const showDone = await read($, showDoneAtom)
+    const now = await $.clock.now()
     // The phone draws no text fields, so there Answer fills the prompt box instead.
     const hasReplyField = e.surface !== 'mobile'
     const shown = showDone ? items : openItems(items)
@@ -353,7 +355,11 @@ export const register: Register = on => {
                         {canReply ? '' : ' '}
                         {one.text}
                       </Text>
-                      {isElsewhere && <Text dimColor> ({one.folder})</Text>}
+                      <Text dimColor>
+                        {' '}
+                        ({isElsewhere ? `${one.folder}, ` : ''}
+                        {askedAt(one.createdAt, now)})
+                      </Text>
                       {isOpen && one.link && !(canReply && hasReplyField) && !hasFailureRow && (
                         <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />
                       )}
