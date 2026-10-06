@@ -8,7 +8,8 @@ let submitted: string | undefined
 // Like the app: while the pane holds the keys, the prompt box refuses text.
 let isPaneOpen = true
 
-async function start($: any, on: any) {
+async function start($: any, on: any, env: Record<string, string> = {}) {
+  mock.env(on, env)
   filled = undefined
   isPaneOpen = true
   on('prompt.fill', (_$: unknown, e: { text: string }) => {
@@ -237,27 +238,6 @@ test('clicking anywhere on the bar opens the list', async ($: any, on) => {
   await band.unmount()
 })
 
-test('questions and follow-ups cannot be dismissed, only answered; notes can be checked off', async ($: any, on) => {
-  mock.store(on)
-  mock.clock(on)
-  await start($, on)
-  await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Use tabs?' })
-  await $.tool.call({ tool: TOOL, action: 'add', kind: 'followup', text: 'Rotate the key' })
-  await $.command.run({ command: 'todo', args: 'buy milk', origin: { kind: 'user' }, presentation: {} })
-
-  const pane = await $.ui.mount({
-    plugin: 'attention',
-    surface: 'terminal',
-    component: 'Pane',
-    requestId: 'attention',
-    props: { title: 'Needs attention', isFocused: true, bodyColumns: 60 },
-  })
-  const keys = (await pane.findAll({ type: 'Button' })).map(one => one.key ?? '')
-  expect(keys.filter(key => key.startsWith('done-'))).toHaveLength(1)
-  expect(keys.filter(key => key.startsWith('answer-'))).toHaveLength(2)
-  await pane.unmount()
-})
-
 const PANE_AT = (surface: 'terminal' | 'desktop' | 'mobile') =>
   ({
     plugin: 'attention',
@@ -267,40 +247,129 @@ const PANE_AT = (surface: 'terminal' | 'desktop' | 'mobile') =>
     props: { title: 'Needs attention', isFocused: true, bodyColumns: 60 },
   }) as const
 
-test('Answer opens a reply field; Enter sends the reply to Claude, tagged with the item', async ($: any, on) => {
+// An item another session logged, with that session's id and app link.
+const FROM_ELSEWHERE = {
+  id: 'other1',
+  kind: 'question',
+  text: 'Deploy to staging?',
+  detail: 'The build passed; staging is idle.',
+  session: 'otherses',
+  sessionId: 'otherses-full-id',
+  link: 'claude://claude.ai/epitaxy/local_other',
+  folder: 'shop-api',
+  createdAt: 1,
+  status: 'open',
+}
+
+let sentTo: { to: unknown; text: string } | undefined
+let ran: readonly string[] | undefined
+
+function stubElsewhere(on: any) {
+  sentTo = undefined
+  ran = undefined
+  on('session.send', (_$: unknown, e: { to: unknown; text: string }) => {
+    sentTo = e
+    return { isDelivered: true }
+  })
+  on('process.run', (_$: unknown, e: { argv: readonly string[] }) => {
+    ran = e.argv
+    return { value: { exitCode: 0, stdout: '', stderr: '' } }
+  })
+}
+
+test('questions and follow-ups have a reply field and no dismiss; notes keep their check', async ($: any, on) => {
   mock.store(on)
   mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+  await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Use tabs?' })
+  await $.tool.call({ tool: TOOL, action: 'add', kind: 'followup', text: 'Rotate the key' })
+  await $.command.run({ command: 'todo', args: 'buy milk', origin: { kind: 'user' }, presentation: {} })
+
+  const pane = await $.ui.mount(PANE_AT('terminal'))
+  const keys = (await pane.findAll({})).map(one => one.key ?? '')
+  expect(keys.filter(key => key.startsWith('reply-'))).toHaveLength(2)
+  expect(keys.filter(key => key.startsWith('done-'))).toHaveLength(1)
+  expect(keys.filter(key => key.startsWith('answer-'))).toHaveLength(0)
+  // Items from this session need no Go button.
+  expect(keys.filter(key => key.startsWith('go-'))).toHaveLength(0)
+  await pane.unmount()
+})
+
+test('a reply to this session\'s item comes to this session, tagged with the item', async ($: any, on) => {
+  mock.store(on)
+  mock.clock(on)
+  stubElsewhere(on)
   await start($, on)
   await $.tool.call({ tool: TOOL, action: 'add', kind: 'followup', text: 'Restart the dev server' })
   const id = (await listText($)).match(/\[(\w+)\] Restart/)?.[1]
 
   const pane = await $.ui.mount(PANE_AT('desktop'))
-  expect(await pane.find({ key: `reply-${id}` })).toBeUndefined()
-  await pane.press({ key: `answer-${id}` })
-  expect(await pane.find({ key: `reply-${id}` })).toBeDefined()
-
   await pane.input({ key: `reply-${id}`, text: 'done, it is back up' })
   expect(submitted).toBe(`Re: "Restart the dev server" [${id}]\ndone, it is back up`)
-  expect(await pane.find({ key: `reply-${id}` })).toBeUndefined()
+  expect(sentTo).toBeUndefined()
   await pane.unmount()
+})
+
+test('a reply to another session\'s item is sent to that session', async ($: any, on) => {
+  mock.store(on, { items: [FROM_ELSEWHERE] })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  await pane.input({ key: 'reply-other1', text: 'yes, go ahead' })
+  // The engine resolves `{ sessionId }` to that session's address on the way through.
+  expect(sentTo).toMatchObject({ to: 'otherses-full-id', text: 'Re: "Deploy to staging?" [other1]\nyes, go ahead' })
+  expect(submitted).toBeUndefined()
+  await pane.unmount()
+})
+
+test('Go opens the session the item came from', async ($: any, on) => {
+  mock.store(on, { items: [FROM_ELSEWHERE] })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  await pane.press({ key: 'go-other1' })
+  expect(ran).toEqual(['open', 'claude://claude.ai/epitaxy/local_other'])
+  expect(await pane.find({ type: 'Text', text: /staging is idle/ })).toBeDefined()
+  await pane.unmount()
+})
+
+test('items record this session\'s app link when it has one', async ($: any, on) => {
+  // Captures what the mod stores, in place of mock.store.
+  let stored: { link?: string; sessionId?: string }[] = []
+  on('store.get', () => ({ value: stored }))
+  on('store.set', (_$: unknown, e: { value: typeof stored }) => {
+    stored = e.value
+    return { value: undefined }
+  })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on, { CLAUDE_CODE_HOST_SESSION_ID: 'local_here' })
+  await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Ship it?' })
+  expect(stored[0]).toMatchObject({ link: 'claude://claude.ai/epitaxy/local_here', sessionId: 'abcdef1234567890' })
 })
 
 test('an empty reply sends nothing', async ($: any, on) => {
   mock.store(on)
   mock.clock(on)
+  stubElsewhere(on)
   await start($, on)
   await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Tabs or spaces?' })
   const id = (await listText($)).match(/\[(\w+)\] Tabs/)?.[1]
   const pane = await $.ui.mount(PANE_AT('desktop'))
-  await pane.press({ key: `answer-${id}` })
   await pane.input({ key: `reply-${id}`, text: '   ' })
   expect(submitted).toBeUndefined()
   await pane.unmount()
 })
 
-test('on the phone, Answer still puts the item in the prompt box on the first tap', async ($: any, on) => {
+test('on the phone, which has no text fields, Answer puts the item in the prompt box', async ($: any, on) => {
   mock.store(on)
   mock.clock(on)
+  stubElsewhere(on)
   await start($, on)
   await $.tool.call({ tool: TOOL, action: 'add', kind: 'question', text: 'Merge now?' })
   const id = (await listText($)).match(/\[(\w+)\] Merge/)?.[1]

@@ -21,7 +21,7 @@ Click the bar (or run `/attention`) to open the list.
 | Failures | Any tool call that errors or that you deny. Harmless noise is skipped: a search or check that exits 1 with no error output, like `grep` finding nothing. The item closes itself when the same command later succeeds. |
 | Notes | Your own, with `/todo <text>`. |
 
-**Answering**: questions and follow-ups have an **Answer** button that opens a reply field under the item with the cursor in it. Type and press Enter: the reply goes to Claude as `Re: "<item>" [<id>]`, and Claude closes the item once it has acted on it. (The mobile app has no text fields, so there Answer puts that line in your prompt box instead.) Questions and follow-ups can't be dismissed unanswered. Notes and failures have ✓.
+**Answering**: every question and follow-up has a reply field right under it, with Claude's explanation above it. Type and press Enter (or **Send**). The reply goes to the session that asked: to Claude here if it came from this session, or as a message to that other session if not. It arrives as `Re: "<item>" [<id>]`, and Claude closes the item once it has acted on it. Items from another desktop session also have a **Go** button that switches the app to that session for the full conversation. Questions and follow-ups can't be dismissed unanswered; notes and failures have ✓. (The mobile app has no text fields, so there an **Answer** button puts the reply line in your prompt box.)
 
 **Shared**: the list is kept across sessions on the same machine, and each item shows which folder it came from. `/attention clear` marks everything from the current session done.
 

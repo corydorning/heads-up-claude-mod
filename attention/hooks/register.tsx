@@ -29,8 +29,6 @@ const STORE_KEY = 'items'
 // The shared list: `$.store` holds it across sessions, `$.state` mirrors it so drawings redraw.
 const itemsAtom = atom({ plugin: 'attention', key: 'items' } as const, [] as Item[])
 const showDoneAtom = atom({ plugin: 'attention', key: 'showDone' } as const, false)
-// The item whose reply field is open in the pane, if any.
-const answeringAtom = atom({ plugin: 'attention', key: 'answering' } as const, null as string | null)
 
 const GUIDANCE = `# Tracking items that need the user's attention
 
@@ -39,8 +37,9 @@ You have an \`${TOOL_FULL}\` tool that keeps a list of open items the user sees 
 - Set "blocking": true on a question only when you have stopped and cannot continue until the user answers; leave it off when you made a reasonable choice and the user can weigh in whenever.
 - When you tell the user to do something later that you cannot do yourself (restart a server, review before merging, rotate a key), call it with action "add", kind "followup".
 - When an item you or the user logged is dealt with (the user answered, the follow-up is done), call it with action "resolve" and its ids. Use action "list" to see open ids.
-- A user message that begins \`Re: "<item>" [<id>]\` is the user's reply to that logged question or follow-up: act on it, then resolve that id unless the reply leaves it open.
-- Keep each item to one short line. Do not log routine progress, and do not log the same thing twice.
+- A message that begins \`Re: "<item>" [<id>]\` (typed here, or sent from another session's attention list) is the user's reply to that logged question or follow-up: act on it, then resolve that id unless the reply leaves it open.
+- Always give a "detail" of 1-3 sentences that makes sense to someone who has not seen this conversation: what you were doing, the options, and what each answer leads to.
+- Keep each item's text to one short line. Do not log routine progress, and do not log the same thing twice.
 Failed commands and the user's own /todo notes are tracked automatically; do not log those.`
 
 const TOOL_SCHEMA = {
@@ -71,12 +70,18 @@ type ToolArgs = {
 // Who this session is; set again by session.start after every reload.
 let session = 'unknown'
 let folder = 'unknown'
+let sessionId = 'unknown'
+// The desktop app's link to this session; absent in a terminal or remote session.
+let link: string | undefined
 // Whether Claude logged an item itself during the current main-loop turn.
 let hasLoggedThisTurn = false
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    session = (await $.session.id()).slice(0, 8)
+    sessionId = await $.session.id()
+    session = sessionId.slice(0, 8)
+    const hostId = await $.env.get('CLAUDE_CODE_HOST_SESSION_ID')
+    link = hostId ? `claude://claude.ai/epitaxy/${hostId}` : undefined
     folder = e.cwd.split('/').filter(Boolean).pop() ?? e.cwd
 
     await $.tool.register({
@@ -288,7 +293,6 @@ export const register: Register = on => {
     const { Box, Button, Input, Text } = $.ui.resolve(e)
     const items = await read($, itemsAtom)
     const showDone = await read($, showDoneAtom)
-    const answering = await read($, answeringAtom)
     // The phone draws no text fields, so there Answer fills the prompt box instead.
     const hasReplyField = e.surface !== 'mobile'
     const shown = showDone ? items : openItems(items)
@@ -316,54 +320,51 @@ export const register: Register = on => {
               <Text bold color="suggestion">
                 {KIND_LABEL[kind][1].toUpperCase()}
               </Text>
-              {group.map(one => (
-                <Box key={`item-${one.id}`} flexDirection="column">
-                  <Box>
-                    {one.status === 'open' ? (
-                      // Questions and follow-ups need a response, so they are answered, never dismissed;
-                      // Claude closes them once it has acted on the answer.
-                      one.kind === 'question' || one.kind === 'followup' ? (
-                        <Button
-                          key={`answer-${one.id}`}
-                          label="Answer"
-                          onPress={() => void (hasReplyField ? startReply($, one) : answer($, one))}
-                        />
-                      ) : (
-                        <Button key={`done-${one.id}`} label="✓" onPress={done(one.id)} />
-                      )
-                    ) : (
-                      <Text dimColor>✓ </Text>
-                    )}
-                    <Text
-                      dimColor={one.status === 'done'}
-                      strikethrough={one.status === 'done'}
-                      color={one.blocking && one.status === 'open' ? 'error' : undefined}
-                    >
-                      {' '}
-                      {one.text}
-                    </Text>
-                    {one.session !== session && <Text dimColor> ({one.folder})</Text>}
-                  </Box>
-                  {hasReplyField && answering === one.id && one.status === 'open' && (
+              {group.map(one => {
+                const isOpen = one.status === 'open'
+                // Questions and follow-ups need a response, so they get a reply field, never a dismiss;
+                // Claude closes them once it has acted on the reply.
+                const isAnswerable = one.kind === 'question' || one.kind === 'followup'
+                const isElsewhere = one.session !== session
+
+                return (
+                  <Box key={`item-${one.id}`} flexDirection="column">
                     <Box>
+                      {!isOpen && <Text dimColor>✓ </Text>}
+                      {isOpen && !isAnswerable && <Button key={`done-${one.id}`} label="✓" onPress={done(one.id)} />}
+                      <Text
+                        dimColor={!isOpen}
+                        strikethrough={!isOpen}
+                        color={one.blocking && isOpen ? 'error' : undefined}
+                      >
+                        {isAnswerable && isOpen ? '' : ' '}
+                        {one.text}
+                      </Text>
+                      {isElsewhere && <Text dimColor> ({one.folder})</Text>}
+                      {isOpen && isElsewhere && one.link && (
+                        <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />
+                      )}
+                      {isOpen && isAnswerable && !hasReplyField && (
+                        <Button key={`answer-${one.id}`} label="Answer" onPress={() => void answer($, one)} />
+                      )}
+                    </Box>
+                    {one.detail && isOpen && (
+                      <Text dimColor wrap="wrap">
+                        {'  '}
+                        {one.detail}
+                      </Text>
+                    )}
+                    {isOpen && isAnswerable && hasReplyField && (
                       <Input
                         key={`reply-${one.id}`}
-                        placeholder="Type your answer, then Enter"
+                        placeholder={isElsewhere ? `Reply to ${one.folder}…` : 'Reply…'}
                         submitLabel="Send"
-                        autoFocus
                         onSubmit={value => void sendReply($, one, value)}
                       />
-                      <Button key={`cancel-${one.id}`} label="Cancel" onPress={() => update($, answeringAtom, () => null)} />
-                    </Box>
-                  )}
-                  {one.detail && one.status === 'open' && (
-                    <Text dimColor wrap="truncate-end">
-                      {'    '}
-                      {one.detail.split('\n')[0]}
-                    </Text>
-                  )}
-                </Box>
-              ))}
+                    )}
+                  </Box>
+                )
+              })}
             </Box>
           )
         })}
@@ -380,17 +381,24 @@ async function newItem(
 ): Promise<Item> {
   const now = await $.clock.now()
 
-  return { id: makeId(now), kind, text, session, folder, createdAt: now, status: 'open', ...extra }
+  return {
+    id: makeId(now),
+    kind,
+    text,
+    session,
+    sessionId,
+    ...(link ? { link } : {}),
+    folder,
+    createdAt: now,
+    status: 'open',
+    ...extra,
+  }
 }
 
-/** Opens the reply field under an item and puts the cursor in it. */
-async function startReply($: EngineInterface, item: Item): Promise<void> {
-  await update($, answeringAtom, () => item.id)
-  // The field also asks for focus as it is drawn (autoFocus); this is a second try, so a refusal is fine.
-  await $.ui.focus({ requestId: PANE, key: `reply-${item.id}` }).catch(() => undefined)
-}
-
-/** Sends the reply to Claude, tagged with the item so Claude can close it after acting on it. */
+/**
+ * Sends the reply to the session that logged the item, tagged so Claude there can close it after acting
+ * on it: this session through its own prompt, another through a session message.
+ */
 async function sendReply($: EngineInterface, item: Item, value: string): Promise<void> {
   const reply = value.trim()
 
@@ -398,9 +406,33 @@ async function sendReply($: EngineInterface, item: Item, value: string): Promise
     return
   }
 
-  await update($, answeringAtom, () => null)
-  await $.ui.close({ id: PANE })
-  await $.prompt.submit({ text: `Re: "${item.text}" [${item.id}]\n${reply}` })
+  const text = `Re: "${item.text}" [${item.id}]\n${reply}`
+
+  if (item.session === session) {
+    await $.prompt.submit({ text })
+
+    return
+  }
+
+  if (item.sessionId === undefined) {
+    $.ui.toast(`Can't reach the ${item.folder} session from here; open it to reply.`)
+
+    return
+  }
+
+  const sent = await $.session.send({ to: { sessionId: item.sessionId }, text })
+  $.ui.toast(
+    sent.isDelivered
+      ? `Reply sent to ${item.folder}.`
+      : `Couldn't reach the ${item.folder} session (${sent.reason})${item.link ? '; use Go to open it.' : '.'}`,
+  )
+}
+
+/** Switches the app to the session that logged the item. */
+async function goTo($: EngineInterface, item: Item): Promise<void> {
+  if (item.link !== undefined) {
+    await $.process.run(['open', item.link])
+  }
 }
 
 /** Quotes a question or follow-up into the prompt box, tagged with its id so the reply can resolve it. */
@@ -411,7 +443,8 @@ async function answer($: EngineInterface, item: Item): Promise<void> {
 }
 
 async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE, title: 'Needs attention' })
+  // Opened by the person (the bar or /attention), so it takes the keys: a first click then lands.
+  await $.ui.open({ id: PANE, title: 'Needs attention', focus: true })
 }
 
 function hasStderr(result: unknown): boolean {
