@@ -149,14 +149,25 @@ export function isItemList(value: unknown): value is Item[] {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** When an item was raised, in local time: "9:05 AM" today, "Oct 5, 9:05 AM" before. */
+/**
+ * When an item was raised, in local time: "Today, 9:05 AM", "Yesterday, 9:05 AM", else "Oct 4, 9:05 AM",
+ * with the year when it is not this year.
+ */
 export function askedAt(createdAt: number, now: number): string {
   const at = new Date(createdAt)
   const today = new Date(now)
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+
   const hours = at.getHours() % 12 === 0 ? 12 : at.getHours() % 12
   const time = `${hours}:${String(at.getMinutes()).padStart(2, '0')} ${at.getHours() < 12 ? 'AM' : 'PM'}`
-  const isToday =
-    at.getFullYear() === today.getFullYear() && at.getMonth() === today.getMonth() && at.getDate() === today.getDate()
+  const year = at.getFullYear() === today.getFullYear() ? '' : `, ${at.getFullYear()}`
+  const day = isSameDay(at, today)
+    ? 'Today'
+    : isSameDay(at, yesterday)
+      ? 'Yesterday'
+      : `${MONTHS[at.getMonth()]} ${at.getDate()}${year}`
 
-  return isToday ? time : `${MONTHS[at.getMonth()]} ${at.getDate()}, ${time}`
+  return `${day}, ${time}`
 }

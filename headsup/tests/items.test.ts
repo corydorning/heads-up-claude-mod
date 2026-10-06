@@ -67,10 +67,12 @@ test('blocking questions sort first and lead the summary', () => {
   expect(blockingCount([item({ kind: 'question', blocking: true, status: 'done', doneAt: 5 })])).toBe(0)
 })
 
-test('askedAt shows the time for today and the date too for earlier days', () => {
+test('askedAt says Today or Yesterday, else the date, and the year when it is not this year', () => {
   const now = new Date(2026, 9, 6, 17, 30).getTime()
-  const earlierToday = new Date(2026, 9, 6, 9, 5).getTime()
-  const yesterday = new Date(2026, 9, 5, 21, 0).getTime()
-  expect(askedAt(earlierToday, now)).toMatch(/^9:05\s?AM$/)
-  expect(askedAt(yesterday, now)).toMatch(/^Oct 5, 9:00\s?PM$/)
+  expect(askedAt(new Date(2026, 9, 6, 9, 5).getTime(), now)).toBe('Today, 9:05 AM')
+  expect(askedAt(new Date(2026, 9, 5, 21, 0).getTime(), now)).toBe('Yesterday, 9:00 PM')
+  expect(askedAt(new Date(2026, 9, 4, 0, 30).getTime(), now)).toBe('Oct 4, 12:30 AM')
+  expect(askedAt(new Date(2025, 11, 31, 12, 0).getTime(), now)).toBe('Dec 31, 2025, 12:00 PM')
+  // Yesterday across a month and year boundary.
+  expect(askedAt(new Date(2025, 11, 31, 8, 0).getTime(), new Date(2026, 0, 1, 9, 0).getTime())).toBe('Yesterday, 8:00 AM')
 })
