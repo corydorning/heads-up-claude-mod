@@ -1,6 +1,6 @@
 {
-  "name": "claude-mods",
-  "description": "Mods for Claude Code: live UI and behavior built as function-hook plugins",
+  "name": "heads-up-claude-mod",
+  "description": "Heads Up: a Claude Code mod that keeps one list of what needs you",
   "owner": {
     "name": "Cory Dorning"
   },

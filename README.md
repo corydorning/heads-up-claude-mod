@@ -1,6 +1,6 @@
-# claude-mods
+# heads-up-claude-mod
 
-Mods for [Claude Code](https://claude.com/claude-code): plugins written as function hooks that add live UI and behavior to a session.
+A mod for [Claude Code](https://claude.com/claude-code): a plugin written as function hooks that adds live UI and behavior to a session.
 
 ## Heads Up
 
@@ -30,7 +30,7 @@ Click the bar (or run `/headsup`) to open the list.
 ### Every session on your machine
 
 ```bash
-git clone https://github.com/corydorning/claude-mods ~/.claude/mods
+git clone https://github.com/corydorning/heads-up-claude-mod ~/.claude/mods
 ```
 
 Then add the mod's folder to `~/.claude/settings.json`:
@@ -51,8 +51,8 @@ New sessions load it. `CLAUDE_CODE_PLUGIN_DIR_WATCH` makes desktop-app sessions 
 Remote sessions can't see your machine, so the cloud environment has to fetch the mod. Add this to your environment's setup script:
 
 ```bash
-git clone --depth 1 https://github.com/corydorning/claude-mods /tmp/claude-mods
-mkdir -p ~/.claude/skills && cp -R /tmp/claude-mods/headsup ~/.claude/skills/headsup
+git clone --depth 1 https://github.com/corydorning/heads-up-claude-mod /tmp/heads-up-claude-mod
+mkdir -p ~/.claude/skills && cp -R /tmp/heads-up-claude-mod/headsup ~/.claude/skills/headsup
 ```
 
 Each remote session keeps its own list; it isn't synced with your machine.
