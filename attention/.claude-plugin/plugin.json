@@ -1,0 +1,12 @@
+{
+  "name": "attention",
+  "version": "0.1.0",
+  "description": "Tracks open items that need your attention: questions, follow-ups, failures and your own notes",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Cory Dorning"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/corydorning/claude-mods",
+  "homepage": "https://github.com/corydorning/claude-mods/tree/main/attention"
+}

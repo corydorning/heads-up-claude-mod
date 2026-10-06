@@ -1,0 +1,14 @@
+{
+  "name": "claude-mods",
+  "description": "Mods for Claude Code: live UI and behavior built as function-hook plugins",
+  "owner": {
+    "name": "Cory Dorning"
+  },
+  "plugins": [
+    {
+      "name": "attention",
+      "source": "./attention",
+      "description": "Tracks what needs your attention in Claude Code: questions, follow-ups, failures and your own notes"
+    }
+  ]
+}
