@@ -362,8 +362,7 @@ export const register: Register = on => {
                         <Button key={`answer-${one.id}`} label="Answer" onPress={() => void answer($, one)} />
                       )}
                     </Box>
-                    <Text dimColor>
-                      {'  '}
+                    <Text dimColor italic>
                       {askedAt(one.createdAt, now)}
                       {isElsewhere ? ` · from ${one.folder}` : ''}
                     </Text>
