@@ -16,8 +16,6 @@ import {
   resolve,
   resolveFingerprint,
   summary,
-  claudeTextUuid,
-  goLink,
 } from './items'
 import { isNoise } from './noise'
 import { trailingQuestion } from './questions'
@@ -77,8 +75,6 @@ let folder = 'unknown'
 let sessionId = 'unknown'
 // The desktop app's link to this session; absent in a terminal or remote session.
 let link: string | undefined
-// The id of Claude's latest text message in the main loop, recorded on each item logged after it.
-let lastTextUuid: string | undefined
 // Whether Claude logged an item itself during the current main-loop turn.
 let hasLoggedThisTurn = false
 
@@ -103,13 +99,6 @@ export const register: Register = on => {
     })
     await refresh($)
     $.clock.every(REFRESH_MS, () => void refresh($))
-
-    return next(e)
-  })
-
-  // Notes the id of each text message Claude writes, without changing it.
-  on('session.append', ($, e, next) => {
-    lastTextUuid = claudeTextUuid(e) ?? lastTextUuid
 
     return next(e)
   })
@@ -436,7 +425,6 @@ async function newItem(
     session,
     sessionId,
     ...(link ? { link } : {}),
-    ...(lastTextUuid ? { messageUuid: lastTextUuid } : {}),
     folder,
     createdAt: now,
     status: 'open',
@@ -504,7 +492,7 @@ async function sendReply($: EngineInterface, item: Item, value: string): Promise
 async function goTo($: EngineInterface, item: Item): Promise<void> {
   if (item.link !== undefined) {
     await $.ui.close({ id: PANE })
-    await $.process.run(['open', goLink(item.link, item.messageUuid)])
+    await $.process.run(['open', item.link])
   }
 }
 
