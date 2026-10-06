@@ -357,6 +357,28 @@ test('the reply row draws one Send, with Go to its right', async ($: any, on) =>
   await pane.unmount()
 })
 
+test('a failure draws Close, with Go to its right, and Close resolves it', async ($: any, on) => {
+  const failure = { ...FROM_ELSEWHERE, id: 'fail1', kind: 'failure', text: 'Bash failed: npm test' }
+  mock.store(on, { items: [failure] })
+  mock.clock(on)
+  stubElsewhere(on)
+  await start($, on)
+
+  const pane = await $.ui.mount(PANE_AT('desktop'))
+  const keys = (await pane.findAll({})).map(one => one.key ?? '').filter(key => key.endsWith('-fail1'))
+  expect(keys.filter(key => key.startsWith('done-'))).toHaveLength(1)
+  expect(keys.filter(key => key.startsWith('go-'))).toHaveLength(1)
+  expect(keys.indexOf('done-fail1')).toBeLessThan(keys.indexOf('go-fail1'))
+  expect((await pane.find({ key: 'done-fail1' }))?.props?.label).toBe('Close')
+  await pane.press({ key: 'go-fail1' })
+  expect(ran).toEqual(['open', 'claude://claude.ai/epitaxy/local_other'])
+  await pane.press({ key: 'done-fail1' })
+  expect(await pane.find({ key: 'done-fail1' })).toBeUndefined()
+  await pane.press({ key: 'toggle-done' })
+  expect(await pane.find({ type: 'Text', text: /✓/ })).toBeUndefined()
+  await pane.unmount()
+})
+
 test('items record this session\'s app link when it has one', async ($: any, on) => {
   // Captures what the mod stores, in place of mock.store.
   let stored: { link?: string; sessionId?: string }[] = []

@@ -22,3 +22,12 @@ test('keeps long questions to one line', () => {
   const long = `Should I ${'really '.repeat(40)}do it?`
   expect(trailingQuestion(long)!.length).toBeLessThanOrEqual(160)
 })
+
+test('ignores question marks inside quotes, such as a quoted item title', () => {
+  expect(
+    trailingQuestion('The reply part of the test is still open: type a reply under "Test question: is Heads Up working?" and press Enter.'),
+  ).toBeUndefined()
+  expect(trailingQuestion('To finish: click Go on “Is it working?”. The app should switch.')).toBeUndefined()
+  // A real question that also quotes one is still found.
+  expect(trailingQuestion('I logged "Ready to ship?" for you. Want me to wait for it?')).toBe('Want me to wait for it?')
+})

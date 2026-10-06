@@ -9,6 +9,8 @@ export function trailingQuestion(reply: string): string | undefined {
   const plain = lastParagraph
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/https?:\/\/\S+/g, '')
+    // A question inside quotes is quoted (an item's title, say), not asked.
+    .replace(/"[^"\n]*"|“[^”\n]*”/g, '')
     .replace(/[*_`]/g, '')
     .replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, '')
     .replace(/\s+/g, ' ')

@@ -335,12 +335,14 @@ export const register: Register = on => {
                 const isUnreachable = isAnswerable && isElsewhere && one.sessionId === undefined
                 const hasReplied = one.repliedAt !== undefined
                 const canReply = isOpen && isAnswerable && !isUnreachable && !hasReplied
+                // Failures get their own row of Close and Go, under the item.
+                const hasFailureRow = isOpen && one.kind === 'failure'
 
                 return (
                   <Box key={`item-${one.id}`} flexDirection="column">
                     <Box>
-                      {!isOpen && <Text dimColor>✓ </Text>}
-                      {isOpen && (!isAnswerable || isUnreachable) && (
+                      {!isOpen && one.kind !== 'failure' && <Text dimColor>✓ </Text>}
+                      {isOpen && (!isAnswerable || isUnreachable) && !hasFailureRow && (
                         <Button key={`done-${one.id}`} label="✓" onPress={done(one.id)} />
                       )}
                       <Text
@@ -352,7 +354,7 @@ export const register: Register = on => {
                         {one.text}
                       </Text>
                       {isElsewhere && <Text dimColor> ({one.folder})</Text>}
-                      {isOpen && one.link && !(canReply && hasReplyField) && (
+                      {isOpen && one.link && !(canReply && hasReplyField) && !hasFailureRow && (
                         <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />
                       )}
                       {canReply && !hasReplyField && (
@@ -364,6 +366,12 @@ export const register: Register = on => {
                         {'  '}
                         {one.detail}
                       </Text>
+                    )}
+                    {hasFailureRow && (
+                      <Box>
+                        <Button key={`done-${one.id}`} label="Close" onPress={done(one.id)} />
+                        {one.link && <Button key={`go-${one.id}`} label="Go" onPress={() => void goTo($, one)} />}
+                      </Box>
                     )}
                     {isOpen && isUnreachable && (
                       <Text dimColor>{'  '}Logged before replies could reach other sessions: reply in that session, or ✓ to clear.</Text>
